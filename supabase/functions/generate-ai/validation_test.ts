@@ -117,6 +117,12 @@ Deno.test('validates identification answers and accepted responses', () => {
   }));
   const result = parseAndValidateResult(JSON.stringify({ kind: 'identification', questions }), 'identification', 5) as Record<string, unknown>;
   assert(Array.isArray(result.questions) && result.questions.length === 5, 'Expected five validated identification questions');
+  const withoutAcceptedAnswers = parseAndValidateResult(JSON.stringify({
+    kind: 'identification',
+    questions: questions.map(({ acceptedAnswers, ...question }) => question),
+  }), 'identification', 5) as Record<string, unknown>;
+  const firstQuestion = (withoutAcceptedAnswers.questions as Array<Record<string, unknown>>)[0];
+  assert(Array.isArray(firstQuestion.acceptedAnswers) && firstQuestion.acceptedAnswers[0] === 'Answer', 'The answer should be accepted when no aliases are provided');
 });
 
 Deno.test('validates mixed mock exam questions', () => {
@@ -129,6 +135,12 @@ Deno.test('validates mixed mock exam questions', () => {
   ];
   const result = parseAndValidateResult(JSON.stringify({ kind: 'mock_exam', questions }), 'mock_exam', 5) as Record<string, unknown>;
   assert(Array.isArray(result.questions) && result.questions.length === 5, 'Expected five validated mixed questions');
+  const withoutQuestionKinds = parseAndValidateResult(JSON.stringify({
+    kind: 'mock_exam',
+    questions: questions.map(({ kind, ...question }) => question),
+  }), 'mock_exam', 5) as Record<string, unknown>;
+  const normalizedQuestions = withoutQuestionKinds.questions as Array<Record<string, unknown>>;
+  assert(normalizedQuestions[0].kind === 'mcq' && normalizedQuestions[1].kind === 'true_false' && normalizedQuestions[2].kind === 'identification', 'Question kinds should be inferred from unambiguous fields');
   assertThrows(() => parseAndValidateResult(JSON.stringify({ kind: 'mock_exam', questions: Array.from({ length: 5 }, (_, index) => mcq(index)) }), 'mock_exam', 5), 'without mixed question types');
 });
 

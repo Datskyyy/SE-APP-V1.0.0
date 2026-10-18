@@ -237,7 +237,18 @@ export function parseAndValidateResult(responseText: string, type: StudyFormat, 
     }
     parsed.questions = parsed.questions.map((question) => {
       if (!isRecord(question)) throw new Error('The AI returned an invalid question. Please retry generation.');
-      const kind = normalizeKind(question.kind ?? question.type ?? question.questionType)
+      const declaredKind = normalizeKind(question.kind ?? question.type ?? question.questionType);
+      const rawQuestionAnswer = question.answer ?? question.correctAnswer ?? question.correct_answer;
+      const inferredMockKind = type === 'mock_exam'
+        ? Array.isArray(question.options ?? question.choices)
+          ? 'mcq'
+          : typeof rawQuestionAnswer === 'boolean' || ['true', 'false'].includes(String(rawQuestionAnswer).toLowerCase())
+            ? 'true_false'
+            : typeof rawQuestionAnswer === 'string'
+              ? 'identification'
+              : null
+        : null;
+      const kind = declaredKind || inferredMockKind
         || (type === 'mcq' || type === 'true_false' || type === 'identification' ? type : null);
       const prompt = requireString(question.prompt ?? question.question ?? question.statement, 'a question prompt');
       const explanation = requireString(question.explanation ?? question.rationale, 'a question explanation');
@@ -266,7 +277,10 @@ export function parseAndValidateResult(responseText: string, type: StudyFormat, 
       }
       if (kind === 'identification' && (type === 'identification' || type === 'mock_exam')) {
         const answer = requireString(question.answer, 'an identification answer');
-        const acceptedAnswers = requireStringArray(question.acceptedAnswers, 'accepted answers', 1);
+        const acceptedAnswerValues = question.acceptedAnswers ?? question.accepted_answers;
+        const acceptedAnswers = acceptedAnswerValues === undefined
+          ? [answer]
+          : requireStringArray(acceptedAnswerValues, 'accepted answers', 1);
         if (!acceptedAnswers.some((accepted) => accepted.toLowerCase() === answer.toLowerCase())) acceptedAnswers.push(answer);
         return { kind, prompt, answer, acceptedAnswers, explanation };
       }
