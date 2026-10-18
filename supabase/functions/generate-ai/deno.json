@@ -1,0 +1,9 @@
+{
+  "nodeModulesDir": "auto",
+  "imports": {
+    "supabase": "npm:@supabase/supabase-js@2.49.4",
+    "fflate": "npm:fflate@0.8.2",
+    "unpdf": "npm:unpdf@1.9.0",
+    "fast-xml-parser": "npm:fast-xml-parser@4.5.3"
+  }
+}
